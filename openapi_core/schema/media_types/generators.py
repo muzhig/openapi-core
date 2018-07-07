@@ -10,12 +10,11 @@ class MediaTypeGenerator(object):
         self.dereferencer = dereferencer
         self.schemas_registry = schemas_registry
 
-    def generate(self, content):
+    def generate(self, content, in_request_body=False):
         for mimetype, media_type in iteritems(content):
             schema_spec = media_type.get('schema')
 
             schema = None
             if schema_spec:
-                schema, _ = self.schemas_registry.get_or_create(schema_spec)
-
+                schema, _ = self.schemas_registry.get_or_create(schema_spec, in_request_body=in_request_body)
             yield mimetype, MediaType(mimetype, schema)

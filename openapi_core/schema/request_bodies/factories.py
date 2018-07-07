@@ -15,7 +15,7 @@ class RequestBodyFactory(object):
         request_body_deref = self.dereferencer.dereference(
             request_body_spec)
         content = request_body_deref['content']
-        media_types = self.media_types_generator.generate(content)
+        media_types = self.media_types_generator.generate(content, in_request_body=True)
         required = request_body_deref.get('required', False)
         return RequestBody(media_types, required=required)
 

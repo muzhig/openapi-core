@@ -13,7 +13,7 @@ class SchemaFactory(object):
     def __init__(self, dereferencer):
         self.dereferencer = dereferencer
 
-    def create(self, schema_spec):
+    def create(self, schema_spec, in_request_body=False):
         schema_deref = self.dereferencer.dereference(schema_spec)
 
         schema_type = schema_deref.get('type', 'object')
@@ -28,27 +28,28 @@ class SchemaFactory(object):
         deprecated = schema_deref.get('deprecated', False)
         all_of_spec = schema_deref.get('allOf', None)
         one_of_spec = schema_deref.get('oneOf', None)
+        read_only = schema_deref.get('readOnly', False)
         additional_properties_spec = schema_deref.get('additionalProperties')
 
         properties = None
         if properties_spec:
-            properties = self.properties_generator.generate(properties_spec)
+            properties = self.properties_generator.generate(properties_spec, in_request_body)
 
         all_of = []
         if all_of_spec:
-            all_of = map(self.create, all_of_spec)
+            all_of = [self.create(s, in_request_body) for s in all_of_spec]
 
         one_of = []
         if one_of_spec:
-            one_of = map(self.create, one_of_spec)
+            one_of = [self.create(s, in_request_body) for s in one_of_spec]
 
         items = None
         if items_spec:
-            items = self._create_items(items_spec)
+            items = self._create_items(items_spec, in_request_body)
 
         additional_properties = None
         if additional_properties_spec:
-            additional_properties = self.create(additional_properties_spec)
+            additional_properties = self.create(additional_properties_spec, in_request_body)
 
         return Schema(
             schema_type=schema_type, model=model, properties=properties,
@@ -56,6 +57,7 @@ class SchemaFactory(object):
             default=default, nullable=nullable, enum=enum,
             deprecated=deprecated, all_of=all_of, one_of=one_of,
             additional_properties=additional_properties,
+            read_only=read_only, in_request_body=in_request_body
         )
 
     @property
@@ -63,5 +65,5 @@ class SchemaFactory(object):
     def properties_generator(self):
         return PropertiesGenerator(self.dereferencer)
 
-    def _create_items(self, items_spec):
-        return self.create(items_spec)
+    def _create_items(self, items_spec, in_request_body=False):
+        return self.create(items_spec, in_request_body=in_request_body)

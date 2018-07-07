@@ -29,7 +29,7 @@ class Schema(object):
             self, schema_type=None, model=None, properties=None, items=None,
             schema_format=None, required=None, default=None, nullable=False,
             enum=None, deprecated=False, all_of=None, one_of=None,
-            additional_properties=None):
+            additional_properties=None, read_only=False, in_request_body=False):
         self.type = schema_type and SchemaType(schema_type)
         self.model = model
         self.properties = properties and dict(properties) or {}
@@ -46,6 +46,25 @@ class Schema(object):
 
         self._all_required_properties_cache = None
         self._all_optional_properties_cache = None
+        self.read_only = read_only
+        self.in_request_body = in_request_body
+
+    @classmethod
+    def set_strict_type_casting(cls):
+        def force_type(*types):
+            def type_caster(value):
+                if not isinstance(value, types):
+                    raise ValueError(value)
+                return value
+
+            return type_caster
+
+        cls.DEFAULT_CAST_CALLABLE_GETTER.update({
+            SchemaType.BOOLEAN: force_type(bool),
+            SchemaType.INTEGER: force_type(int),
+            SchemaType.NUMBER: force_type(int, float),
+            SchemaType.STRING: force_type(str),
+        })
 
     def __getitem__(self, name):
         return self.properties[name]
@@ -130,7 +149,10 @@ class Schema(object):
 
         if casted is None and not self.required:
             return None
-
+        if casted and self.in_request_body and self.read_only:
+            raise InvalidSchemaValue(
+                "Value is readonly!".format(value)
+            )
         if self.enum and casted not in self.enum:
             raise InvalidSchemaValue(
                 "Value of {0} not in enum choices: {1}".format(
@@ -175,7 +197,6 @@ class Schema(object):
         all_props = self.get_all_properties()
         all_props_names = self.get_all_properties_names()
         all_req_props_names = self.get_all_required_properties_names()
-
         if one_of_schema is not None:
             all_props.update(one_of_schema.get_all_properties())
             all_props_names |= one_of_schema.\
