@@ -145,14 +145,15 @@ class Schema(object):
         if self.deprecated:
             warnings.warn(
                 "The schema is deprecated", DeprecationWarning)
+        if self.in_request_body and self.read_only:
+            raise InvalidSchemaValue(
+                "Value is readonly!".format(value)
+            )
         casted = self.cast(value)
 
         if casted is None and not self.required:
             return None
-        if casted and self.in_request_body and self.read_only:
-            raise InvalidSchemaValue(
-                "Value is readonly!".format(value)
-            )
+
         if self.enum and casted not in self.enum:
             raise InvalidSchemaValue(
                 "Value of {0} not in enum choices: {1}".format(
