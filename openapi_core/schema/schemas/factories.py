@@ -29,7 +29,10 @@ class SchemaFactory(object):
         all_of_spec = schema_deref.get('allOf', None)
         one_of_spec = schema_deref.get('oneOf', None)
         read_only = schema_deref.get('readOnly', False)
+        free_form = False
         additional_properties_spec = schema_deref.get('additionalProperties')
+        if additional_properties_spec in [True, {}]:
+            free_form = True
 
         properties = None
         if properties_spec:
@@ -48,7 +51,7 @@ class SchemaFactory(object):
             items = self._create_items(items_spec, in_request_body)
 
         additional_properties = None
-        if additional_properties_spec:
+        if additional_properties_spec and not free_form:
             additional_properties = self.create(additional_properties_spec, in_request_body)
 
         return Schema(
@@ -57,7 +60,7 @@ class SchemaFactory(object):
             default=default, nullable=nullable, enum=enum,
             deprecated=deprecated, all_of=all_of, one_of=one_of,
             additional_properties=additional_properties,
-            read_only=read_only, in_request_body=in_request_body
+            read_only=read_only, in_request_body=in_request_body, free_form=free_form
         )
 
     @property
